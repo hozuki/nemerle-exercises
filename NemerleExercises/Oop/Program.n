@@ -1,0 +1,20 @@
+﻿using Nemerle;
+using Nemerle.Collections;
+using Nemerle.Text;
+using Nemerle.Utility;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NemerleExercises.Oop {
+	module Program {
+
+		Main(): void {
+			Week2.TestExercise1();
+			
+			_ = System.Console.ReadKey(true);
+		}
+
+	}
+}

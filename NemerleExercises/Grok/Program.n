@@ -1,0 +1,20 @@
+﻿using Nemerle;
+using Nemerle.Collections;
+using Nemerle.Text;
+using Nemerle.Utility;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NemerleExercises.Grok {
+	module Program {
+
+		GrokMain() : void {
+			Grok2.G2_2(); 
+
+			_ = Console.ReadKey(true);
+		} 
+
+	}
+}

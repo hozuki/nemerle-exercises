@@ -1,0 +1,120 @@
+﻿using Nemerle.IO;
+
+namespace NemerleExercises.Grok {
+	module Grok1 {
+
+		public G1_1(): void {
+			def num = 100;
+			mutable i = 1;
+			mutable s;
+			while (i < num) {
+				if (i == 1){
+					s = string.Empty;
+				} else {
+					s = "s";
+				}
+				printf("%d bottle%s of beer.\n", i, s);
+				++i;
+			}
+		}
+
+		public G1_2(): void {
+			def random = System.Random();
+		
+			def isOrdered(arr: array[int]) {
+				return: {
+					for (mutable i = 0; i < arr.Length - 1; ++i) {
+						when (arr[i] > arr[i + 1]) {
+							return(false);
+						}
+					}
+				
+					true;
+				}
+			}
+		
+			def shuffle(arr: array[int]): void {
+				for (mutable i = 0; i < arr.Length; ++i) {
+					def targetIndex = random.Next(arr.Length);
+				
+					def c = arr[i];
+					arr[i] = arr[targetIndex];
+					arr[targetIndex] = c;
+				}
+			}
+		
+			def bogo(arr: array[int]): void {
+				mutable i = 1;
+			
+				while (!isOrdered(arr)) {
+					shuffle(arr);
+				
+					printf("Shuffled %d time(s)\n", i);
+				
+					++i;
+				}
+			}
+		
+			def testArray = array [4242, 42, -42, 31415];
+		
+			bogo(testArray);
+		}
+	
+		public G1_3(): void {
+			def random = System.Random();
+		
+			def isOrdered(arr: array[int]) {
+				def isOrderedInternal(arr, index) {
+					if (index >= arr.Length - 1) {
+						true;
+					} else {
+						if (arr[index] > arr[index + 1]) {
+							false;
+						} else {
+							isOrderedInternal(arr, index + 1);
+						}
+					}
+				}
+			
+				isOrderedInternal(arr, 0)
+			}
+		
+			def shuffle(arr: array[int]) {
+				def shuffleInternal(arr, index) {
+					def swap(arr, i1, i2) {
+						def c = arr[i1];
+						arr[i1] = arr[i2];
+						arr[i2] = c;
+					}
+				
+					def targetIndex = random.Next(arr.Length);
+				
+					swap(arr, index, targetIndex);
+				
+					when (index > 0) {
+						shuffleInternal(arr, index - 1);
+					}
+				}
+			
+				shuffleInternal(arr, arr.Length - 1);
+			}
+		
+			def bogo(arr: array[int]) {
+				mutable i = 1;
+			
+				while (!isOrdered(arr)) {
+					shuffle(arr);
+				
+					printf("Shuffled %d time(s)\n", i);
+				
+					++i;
+				}
+			}
+		
+			def testArray = array [4242, 42, -42, 31415];
+		
+			bogo(testArray);
+		}
+
+	}
+}

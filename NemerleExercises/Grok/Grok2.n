@@ -1,0 +1,260 @@
+﻿using System.Text;
+using Nemerle.IO;
+
+namespace NemerleExercises.Grok {
+	module Grok2 {
+	
+		println(text: string): void {
+			print(text);
+			print("\n");
+		}
+
+		public G2_1a(): void {
+			def string_pow(times, f: string -> string, input) {
+				mutable r = f(input);
+
+				for (mutable i = 0; i < times - 1; ++i) {
+					r = f(r);
+				}
+
+				r;
+			}
+
+			def replace = fun (s) {
+				s.Replace("42", "42ans");
+			}
+
+			def r = string_pow(3, replace, "The answer to everything is 42.");
+
+			printf("%s\n", r);
+		}
+
+		public G2_1b(): void {
+			def string_pow(times, f: string -> string, input) {
+				mutable counter = times;
+
+				def string_pow_loop(counter, f, input) {
+					if (counter > 1) {
+						string_pow_loop(counter - 1, f, f(input));
+					} else {
+						f(input);
+					}
+				}
+
+				string_pow_loop(counter, f, input);
+			}
+
+			def replace = fun (s) {
+				s.Replace("42", "42ans");
+			}
+
+			def r = string_pow(3, replace, "The answer to everything is 42.");
+
+			printf("%s\n", r);
+		}
+
+		variant Node {
+			| Text { value: string; }
+			| Element { name: string; children: list[Node]; }
+		}
+
+		class Refrigerator {
+			public minimal_temperature : float;
+			public content : list [RefrigeratorContent];
+
+			public this(min_temp : float, cont : list[RefrigeratorContent]) {
+				minimal_temperature = min_temp;
+				content = cont;
+			}
+		}
+
+		variant RefrigeratorContent {
+			| Beer { name : string; volume : float; }
+			| Chips { weight : int; }
+			| Ketchup
+		}
+
+		public G2_2(): void {
+			def readXml(xml) {
+				def xmlDoc = System.Xml.XmlDocument();
+				xmlDoc.LoadXml(xml);
+
+				def createNodes(xmlNode: System.Xml.XmlNode) {
+					if (xmlNode.NodeType == System.Xml.XmlNodeType.Text) {
+						Node.Text(value = xmlNode.Value)
+					} else {
+						mutable childrenList = [];
+
+						foreach (child is System.Xml.XmlNode in xmlNode.ChildNodes) {
+							when (child != null) {
+								childrenList = childrenList + [createNodes(child)];
+							}
+						}
+
+						Node.Element(name = xmlNode.Name, children = childrenList);
+					}
+				}
+
+				def docNode = createNodes(xmlDoc);
+
+				// Node #0 is the "<?xml?>" node
+				(docNode :> Node.Element).children.Nth(1)
+			}
+
+			// Basic requirement of 2.2
+			def prettyPrint(node) {
+				def sb = StringBuilder();
+
+				def appendElement(node) {
+					| Node.Element as n => {
+							_ = sb.Append("(");
+							_ = sb.Append(n.name);
+
+							when (n.children.Length > 0) {
+								_ = sb.AppendLine();
+
+								foreach (child in n.children) {
+									appendElement(child);
+								}
+							}
+
+							_ = sb.AppendLine(")");
+					}
+					| Node.Text as n => {
+							_ = sb.AppendLine($"($$text \"$(n.value)\")");
+					}
+				}
+
+				appendElement(node);
+
+				def str = sb.ToString();
+
+				println(str);
+			}
+
+			// "an extra point" of 2.2
+			def prettierPrint(node) {
+				def sb = StringBuilder();
+				mutable lastLevel = 0;
+				mutable nodesHandled = 0;
+
+				def appendElement(node, level) {
+					when (nodesHandled > 0 && lastLevel >= level) {
+						_ = sb.AppendLine();
+					}
+
+					match (node) {
+						| Node.Element as n => {
+								when (level > 0) {
+									_ = sb.Append(' ', level * 2);
+								}
+
+								_ = sb.Append("(");
+								_ = sb.Append(n.name);
+
+							++nodesHandled;
+
+								when (n.children.Length > 0) {
+									_ = sb.AppendLine();
+
+									foreach (child in n.children) {
+										appendElement(child, level + 1);
+									}
+								}
+						}
+						| Node.Text as n => {
+								when (level > 0) {
+									_ = sb.Append(' ', level * 2);
+								}
+
+								_ = sb.Append($"($$text \"$(n.value)\")");
+						}
+					}
+
+					when (lastLevel > level) {
+						_ = sb.Append(')', lastLevel - level);
+					}
+
+					lastLevel = level;
+				}
+
+				appendElement(node, 0);
+
+				// Always closes the first element
+				when (nodesHandled > 0) {
+					_ = sb.Append(')');
+				}
+
+				def str = sb.ToString();
+
+				println(str);
+			}
+
+			def xmlText = @"<?xml version='1.0' encoding='utf-8' ?>
+<refrigerator>
+	<minimal-temperature>-3.0</minimal-temperature>
+	<beer>
+	<name>Hyneken</name>
+	<volume>0.6</volume>
+	</beer>
+	<beer>
+	<name>Bydweisser</name>
+	<volume>0.5</volume>
+	</beer>
+	<beer>
+	<name>Plsner</name>
+	<volume>0.5</volume>
+	</beer>
+	<chips>
+	<weight>500</weight>
+	</chips>
+	<ketchup/>
+</refrigerator>";
+
+			def root = readXml(xmlText);
+
+			prettyPrint(root);
+			prettierPrint(root);
+
+			def fridge = ParseRefrigerator(root);
+
+			print("\n--- parsing test ---\n");
+			print("Minimal temperature: $(fridge.minimal_temperature)\n");
+		}
+
+		ParseRefrigerator (n : Node) : Refrigerator {
+			| Node.Element ("refrigerator", 
+				Node.Element ("minimal-temperature", [Node.Text (min_temp)]) 
+					:: content) =>
+					Refrigerator (System.Single.Parse (min_temp), ParseRefrigeratorContent (content))
+			| _ =>
+					throw System.ArgumentException ()
+		}
+
+		ParseRefrigeratorContent (nodes : list [Node]) 
+			: list [RefrigeratorContent] {
+			| [] => []
+
+			| node :: rest =>
+			def food =
+				match (node) {
+				| Node.Element ("ketchup", []) =>
+					RefrigeratorContent.Ketchup ()
+
+				| Node.Element ("beer", 
+					[Node.Element ("name", [Node.Text (name)]),
+						Node.Element ("volume", [Node.Text (volume)])]) =>
+					RefrigeratorContent.Beer (name, System.Single.Parse (volume))
+
+				| Node.Element ("chips",
+					[Node.Element ("weight", [Node.Text (weight)])]) =>
+					RefrigeratorContent.Chips (System.Int32.Parse (weight))
+
+				| _ =>
+					throw System.ArgumentException ()
+				};
+			food :: ParseRefrigeratorContent (rest)
+		}
+
+	}
+}
