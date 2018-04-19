@@ -101,7 +101,7 @@ namespace NemerleExercises.Oop {
 					}
 				}
 
-				foreach (ch in s.Reverse()) {
+				foreach (ch in s) {
 					| '(' => {
 							handleBuffer();
 							tokens = TreeToken.LeftParen() :: tokens;
@@ -118,30 +118,27 @@ namespace NemerleExercises.Oop {
 
 				assert(numberBuffer.Count == 0);
 
-				tokens;
+				reverse(tokens);
 			}
 
 			def tokens = splitTokens(s);
 
 			def buildFromTokens(tokens) {
-				def stack = System.Collections.Generic.Stack();
+				def stack: System.Collections.Generic.Stack[Tree] = System.Collections.Generic.Stack();
 				mutable cur: Tree = Tree.Null();
 
 				mutable root;
 
-				def alterCur(newNode) {
-					def parent = if (stack.Count > 0) stack.Pop() :> Tree.Node else null;
+				def alterCur(newNode: Tree.Node) {
+					def parent = if (stack.Count > 0) stack.Pop() else null;
 					def last = cur;
 
 					cur = newNode;
 
 					when (parent != null) {
-						if (last == parent.left) {
-							parent.left = cur;
-						} else if (last == parent.right) {
-							parent.right = cur;
-						} else {
-							throw System.ApplicationException();
+						match (parent) {
+							| Tree.Node as p when p.left == last => p.left = cur;
+							| Tree.Node as p when p.right == last => p.right = cur;
 						}
 
 						stack.Push(parent);
@@ -283,6 +280,20 @@ namespace NemerleExercises.Oop {
 				}
 
 				validStack.Count == 0 && (branchCount == 1 || (branchCount == 2 && hasValue));
+			}
+		}
+		
+		reverse[T](list: list[T]): list[T] {
+			def rev(l, l') {
+				match (l) {
+					| head :: tail => rev(tail, head :: l');
+					| Nil => l';
+				}
+			}
+			
+			match (list) {
+				| _ :: _ => rev(list, []);
+				| Nil => [];
 			}
 		}
 
