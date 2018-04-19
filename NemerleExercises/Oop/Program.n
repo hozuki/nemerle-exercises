@@ -11,7 +11,7 @@ namespace NemerleExercises.Oop {
 	module Program {
 
 		Main(): void {
-			Week2.TestExercise1();
+			Week3.TestExercise1();
 			
 			_ = System.Console.ReadKey(true);
 		}

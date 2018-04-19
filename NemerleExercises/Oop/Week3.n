@@ -1,0 +1,290 @@
+﻿using Nemerle;
+using Nemerle.Collections;
+using Nemerle.Text;
+using Nemerle.Utility;
+using Nemerle.Assertions;
+using Nemerle.IO;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NemerleExercises.Oop {
+	module Week3 {
+
+		public TestExercise1(): void {
+			assert(CheckTreeExpression("(1)"));
+			assert(CheckTreeExpression("((1)2(3))"));
+			assert(CheckTreeExpression("(((1)2(3))4((5)6(7)))"));
+			assert(!CheckTreeExpression("((1)2(3))4((5)6(7))"));
+			assert(!CheckTreeExpression("((1)(2))((4)(5))"));
+			assert(!CheckTreeExpression("((1)2(3))4((5)6(7)(8))"));
+			assert(!CheckTreeExpression(""));
+			assert(!CheckTreeExpression(null));
+			assert(!CheckTreeExpression("    "));
+			assert(!CheckTreeExpression("("));
+			assert(!CheckTreeExpression("1"));
+			assert(!CheckTreeExpression("((1)2())4(()6(7))"));
+			assert(CheckTreeExpression("(((1)2())4(()6(7)))"));
+
+			def tree = BuildTree("(((1)2(3))4((5)6(7)))");
+
+			print("Tree: " + tree + "\n\n");
+
+			print("Iteration:\n");
+			tree.Iter(fun (x) {
+				print(x);
+				print("\n");
+			});
+		}
+
+		variant Tree {
+			| Node {
+					mutable left: Tree;
+					mutable elem: int;
+					mutable right: Tree;
+				}
+			| Null
+
+			public override ToString () : string {
+				match (this) {
+					| Tree.Node (l, e, r) => {
+							$"($l $e $r)";
+						}
+					| Tree.Null => ".";
+				}
+			}
+
+			public Iter(f: int -> void): void {
+				match (this) {
+					| Tree.Null => ();
+					| Tree.Node as n => {
+							n.left.Iter(f);
+							f(n.elem);
+							n.right.Iter(f);
+					}
+				}
+			}
+
+		}
+
+		variant TreeToken {
+			| LeftParen
+			| RightParen
+			//| Comma
+			| Value { value: int; }
+
+			public override ToString(): string {
+				match (this) {
+					| LeftParen => "(";
+					| RightParen => ")";
+					//| Comma => "','";
+					| Value as v => v.value.ToString();
+				}
+			}
+		}
+
+		BuildTree(s: string): Tree
+			requires CheckTreeExpression(s) {
+			def splitTokens(s) {
+				mutable tokens = [];
+				def numberBuffer = System.Collections.Generic.List();
+
+				def handleBuffer() {
+					when (numberBuffer.Count > 0) {
+						def str = string(numberBuffer.ToArray());
+						def @int = System.Convert.ToInt32(str);
+
+						tokens = TreeToken.Value(value = @int) :: tokens;
+
+						numberBuffer.Clear();
+					}
+				}
+
+				foreach (ch in s.Reverse()) {
+					| '(' => {
+							handleBuffer();
+							tokens = TreeToken.LeftParen() :: tokens;
+						}
+					| ')' => {
+							handleBuffer();
+							tokens = TreeToken.RightParen() :: tokens;
+						}
+					| '0' | '1' | '2'| '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+							numberBuffer.Add(ch);
+						}
+					| _ => throw System.ArgumentOutOfRangeException();
+				}
+
+				assert(numberBuffer.Count == 0);
+
+				tokens;
+			}
+
+			def tokens = splitTokens(s);
+
+			def buildFromTokens(tokens) {
+				def stack = System.Collections.Generic.Stack();
+				mutable cur: Tree = Tree.Null();
+
+				mutable root;
+
+				def alterCur(newNode) {
+					def parent = if (stack.Count > 0) stack.Pop() :> Tree.Node else null;
+					def last = cur;
+
+					cur = newNode;
+
+					when (parent != null) {
+						if (last == parent.left) {
+							parent.left = cur;
+						} else if (last == parent.right) {
+							parent.right = cur;
+						} else {
+							throw System.ApplicationException();
+						}
+
+						stack.Push(parent);
+					}
+				}
+
+				def build(tokens, prevToken) {
+					match (tokens) {
+						| head :: tail => {
+								mutable next;
+
+								match (tail) {
+									| next' :: _ => next = next';
+									| Nil => next = null;
+								}
+
+								match (head) {
+									| TreeToken.LeftParen => {
+											mutable isEmptyNode;	
+
+											unless (next == null) {
+												match (next) {
+													| TreeToken.RightParen => isEmptyNode = true;
+													| _ => isEmptyNode = false;
+												}
+											}
+
+											match (cur) {
+												| Tree.Null => {
+														unless (isEmptyNode) {
+															alterCur(Tree.Node(left = Tree.Null(), right = Tree.Null(), elem = default(int)));
+														}
+													}
+												| Tree.Node => ();
+											}
+
+											stack.Push(cur);
+
+											unless (prevToken == null) {
+												match (prevToken) {
+													| TreeToken.Value => cur = (cur :> Tree.Node).right;
+													| _ => cur = (cur :> Tree.Node).left;
+												}
+											}
+										}
+									| TreeToken.RightParen => {
+											cur = stack.Pop();
+											root = cur;
+										}
+									| TreeToken.Value as tok => {
+											match (cur) {
+												| Tree.Node as node => node.elem = tok.value;
+												| Tree.Null => alterCur(Tree.Node(left = Tree.Null(), right = Tree.Null(), elem = tok.value));
+											}
+										}
+								}
+
+								build(tail, head);
+							}
+						| Nil => ();
+					}
+				}
+
+				build(tokens, null);
+
+				root;
+			}
+
+			def tree = buildFromTokens(tokens);
+
+			tree;
+		}
+
+		type TreeState = int * bool; // branch count, is value appeared
+
+		CheckTreeExpression(s: string): bool {	
+			return: {
+				when (string.IsNullOrWhiteSpace(s)) {
+					return(false);
+				}
+
+				def validStack: System.Collections.Generic.Stack[TreeState] = System.Collections.Generic.Stack();
+
+				mutable branchCount = 0;
+				mutable hasValue = false;
+
+				foreach (ch in s) {
+					| '(' => {
+							when (branchCount > 0) {
+								branchCount += 1;
+
+								when (!hasValue) {
+									return(false);
+								}
+
+								when (branchCount > 2) {
+									return(false);
+								}
+							}
+
+							validStack.Push((branchCount, hasValue));
+
+							branchCount = 0;
+							hasValue = false;
+						}
+					| ')' => {
+							when (validStack.Count == 0) {
+								return(false);
+							}
+
+							unless (branchCount == 0 || branchCount == 2) {
+								return(false);
+							}
+
+							when (branchCount == 2 && !hasValue) {
+								return(false);
+							}
+
+							(branchCount, hasValue) = validStack.Pop();
+
+							when (branchCount == 0) {
+								branchCount = branchCount + 1;
+							}
+						}
+					| '0' | '1' | '2'| '3' | '4' | '5' | '6' | '7' | '8' | '9' => {
+							match (branchCount) {
+								| 0
+								| 1 => {
+										when (validStack.Count == 0) {
+											return(false);
+										}
+
+										hasValue = true;
+									}
+								| _ => return(false);
+							}
+						}
+					| _ => return(false);
+				}
+
+				validStack.Count == 0 && (branchCount == 1 || (branchCount == 2 && hasValue));
+			}
+		}
+
+	}
+}
