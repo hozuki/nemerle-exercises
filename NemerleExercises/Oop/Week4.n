@@ -1,0 +1,264 @@
+﻿using Nemerle;
+using Nemerle.Collections;
+using Nemerle.Text;
+using Nemerle.Utility;
+using Nemerle.IO;
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace NemerleExercises.Oop {
+	module Week4 {
+
+		public TestExercise1(): void {
+			def set = MySet();
+
+			set.Add(1);
+			set.Add(2);
+			set.Add(1000);
+
+			println(set.Contains(1000));
+			println(set.Contains(1));
+			println(set.Contains(100));
+		}
+		
+		public TestExercise2(): void {
+			println(sum($[1..10]));
+			println(revmap([1,2,3], x => x * 2));
+			println(revfilter($[1..8], x => x % 2 == 0));
+			println(map([1,2,3], x => x * 2));
+			println();
+			println(sum2($[1..10]));
+			println(revmap2([1,2,3], x => x * 2));
+			println(revfilter2($[1..8], x => x % 2 == 0));
+		}
+		
+		println(): void {
+			print("\n");
+		}
+
+		println[T](obj: T): void {
+			print(obj);
+			print("\n");
+		}
+
+		sum(l: list[int]): int {
+			// NOT a tail recursion!
+			//| x :: xs => x + sum(xs);
+			//| Nil => 0;
+			
+			def sum(l, acc) {
+				match (l) {
+					| x :: xs => sum(xs, x + acc);
+					| Nil => acc;
+				}
+			}
+			
+			sum(l, 0);
+		}
+
+		revmap['a, 'b](l: list['a], f: 'a -> 'b): list['b] {
+			def revmap(l, acc, f) {
+				match (l) {
+					| x :: xs => revmap(xs, f(x) :: acc, f);
+					| Nil => acc;
+				}
+			}
+			
+			revmap(l, [], f);
+		}
+		
+		revfilter['a](l: list['a], f: 'a -> bool): list['a] {
+			def revfilter(l, acc, f) {
+				match (l) {
+					| x :: xs => revfilter(xs, if (f(x)) x :: acc else acc, f);
+					| Nil => acc;
+				}
+			}
+			
+			revfilter(l, [], f);
+		}
+		
+		map['a, 'b](l: list['a], f: 'a -> 'b): list['b] {
+			rev(revmap(l, f));
+		}
+		
+		sum2(l: list[int]): int {
+			l.FoldLeft(0, (x, acc) => x + acc);
+		}
+		
+		revmap2['a, 'b](l: list['a], f: 'a -> 'b): list['b] {
+			l.FoldLeft([], (x, acc) => f(x) :: acc);
+		}
+		
+		revfilter2['a](l: list['a], f: 'a -> bool): list['a] {
+			l.FoldLeft([], (x, acc) => if (f(x)) x :: acc else acc);
+		}
+
+		class MySet['a]
+			where 'a: IComparable['a] {
+
+			public Add(elem: 'a): void {
+				match (_tree) {
+					// Nemerle doesn't support matching "Tree[T].Null" (explicitly typed)?
+					| Tree.Null => _tree = Tree.Node(left = Tree.Null(), right = Tree.Null(), elem = elem);
+					| Tree.Node as n => {
+							def add(tree, elem) {
+								def r = tree.elem.CompareTo(elem);
+
+								if (r < 0) {
+									match (tree.right) {
+										| Tree.Null => tree.right = Tree.Node(left = Tree.Null(), right = Tree.Null(), elem = elem);
+										| Tree.Node as n => {
+												def r = n.elem.CompareTo(elem);
+
+												if (r < 0) {
+													add(n, elem);
+												} else if (r > 0) {
+													n.left = Tree.Node(left = n.left, right = Tree.Null(), elem = elem);
+												} else {
+													();
+												}
+										}
+									}
+								} else if (r > 0) {
+									match (tree.left) {
+										| Tree.Null => tree.left = Tree.Node(left = Tree.Null(), right = Tree.Null(), elem = elem);
+										| Tree.Node as n => {
+												def r = n.elem.CompareTo(elem);
+
+												if (r < 0) {
+													n.right = Tree.Node(left = Tree.Null(), right = n.right, elem = elem);
+												} else if (r > 0) {
+													add(n, elem);
+												} else {
+													();
+												}
+										}
+									}
+								} else {
+									();
+								}
+							}
+
+							add(n, elem);
+						}
+				}
+			}
+
+			//public Remove(elem: 'a): bool {
+			//	match (_tree) {
+			//		| Tree.Null => false;
+			//		| Tree.Node as n => {
+			//				def remove(tree, parent, elem) {
+			//					def r = tree.elem.CompareTo(elem);
+
+			//					if (r < 0) {
+			//						match (tree.right) {
+			//							| Tree.Null => false;
+			//							| Tree.Node as n => remove(n, tree, elem);
+			//						}
+			//					} else if (r > 0) {
+			//						match (tree.left) {
+			//							| Tree.Null => false;
+			//							| Tree.Node as n => remove(n, tree, elem);
+			//						}
+			//					} else {
+			//						if (parent == null) {
+			//							_tree = Tree.Null();
+			//						} else {
+			//							if (tree == parent.left) {
+			//								match (tree.left) {
+			//									| Tree.Null => parent.left = tree.right;
+			//									| Tree.Node as left => {
+			//											match (tree.right) {
+			//												| Tree.Null => parent.left = tree.left;
+			//												| Tree.Node as right => {
+			//                                                      // Recursive...
+			//												    }
+			//											}
+			//										}
+			//								}
+			//							} else if (tree == parent.right) {
+			//							} else {
+			//								throw System.ApplicationException();
+			//							}
+			//						}
+
+			//						true;
+			//					}
+			//				}
+
+			//				remove(n, null, elem);
+			//		}
+			//	}
+			//}
+
+			public Contains(elem: 'a): bool {
+				match (_tree) {
+					| Tree.Null => false;
+					| Tree.Node as n => {
+							def contains(tree, elem) {
+								def r = tree.elem.CompareTo(elem);
+
+								if (r < 0) {
+									match (tree.right) {
+										| Tree.Null => false;
+										| Tree.Node as n => contains(n, elem);
+									}
+								} else if (r > 0) {
+									match (tree.left) {
+										| Tree.Null => false;
+										| Tree.Node as n => contains(n, elem);
+									}
+								} else {
+									true;
+								}
+							}
+
+							contains(n, elem);
+						}
+				}
+			}
+
+			private mutable _tree: Tree['a] = Tree.Null();
+
+		}
+
+		variant Tree['a]
+			where 'a : IComparable['a] {
+			| Node {
+					mutable left: Tree['a];
+					mutable elem: 'a;
+					mutable right: Tree['a];
+				}
+			| Null;
+
+			public override ToString () : string {
+				match (this) {
+					| Tree.Node (l, e, r) => {
+							$"($l $e $r)";
+						}
+					| Tree.Null => ".";
+				}
+			}
+
+		}
+
+		rev[T](list: list[T]): list[T] {
+			def rev(l, l') {
+				match (l) {
+					| head :: tail => rev(tail, head :: l');
+					| Nil => l';
+				}
+			}
+
+			match (list) {
+				| _ :: _ => rev(list, []);
+				| Nil => [];
+			}
+		}
+
+	}
+}

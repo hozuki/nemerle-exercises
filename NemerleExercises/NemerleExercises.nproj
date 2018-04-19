@@ -80,6 +80,9 @@
     <Compile Include="Oop\Week3.n">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Oop\Week4.n">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.n" />
   </ItemGroup>
   <ItemGroup>
